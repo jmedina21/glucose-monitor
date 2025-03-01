@@ -52,8 +52,17 @@ export default function GlucoseMonitor() {
                 setLoading(true);
                 setError(null);
 
-                // Call our Next.js API route
-                const response = await axios.get("/api/glucose");
+                // Call our Next.js API route with cache-busting parameters
+                const response = await axios.get(
+                    `/api/glucose?t=${new Date().getTime()}`,
+                    {
+                        headers: {
+                            "Cache-Control": "no-cache",
+                            Pragma: "no-cache",
+                            Expires: "0",
+                        },
+                    }
+                );
 
                 // The response is now already simplified
                 const glucoseData = response.data.glucose;
