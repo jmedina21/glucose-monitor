@@ -52,7 +52,7 @@ export default function GlucoseMonitor() {
                 setLoading(true);
                 setError(null);
 
-                // Call our Next.js API route with cache-busting parameters
+                // Call our Next.js API route with cache-busting parameters otherwise the data will be cached and will get a 304 Not Modified response
                 const response = await axios.get(
                     `/api/glucose?t=${new Date().getTime()}`,
                     {
@@ -64,11 +64,9 @@ export default function GlucoseMonitor() {
                     }
                 );
 
-                // The response is now already simplified
                 const glucoseData = response.data.glucose;
                 const glucoseGraphData = response.data.glucoseGraphData;
 
-                // Update the state with the simplified data
                 setCurrentData({
                     value: glucoseData.value,
                     trend: glucoseData.trend,
@@ -99,7 +97,6 @@ export default function GlucoseMonitor() {
         return () => clearInterval(interval);
     }, []);
 
-    // Helper function to determine trend direction based on API response
     const TrendArrow = () => {
         switch (currentData?.trend) {
             case 5:
@@ -123,14 +120,12 @@ export default function GlucoseMonitor() {
         }
     };
 
-    // Helper function to determine glucose level
     function determineLevel(value: number): GlucoseLevel {
-        if (value > 140) return "high";
+        if (value > 150) return "high";
         if (value < 70) return "low";
         return "normal";
     }
 
-    // Get color based on glucose level
     const getValueColor = () => {
         switch (currentData?.level) {
             case "high":
@@ -152,7 +147,6 @@ export default function GlucoseMonitor() {
         );
     }
 
-    // Format timestamp for tooltip
     const formatTime = (timestamp: string) => {
         return new Date(timestamp).toLocaleTimeString([], {
             hour: "2-digit",
@@ -160,7 +154,6 @@ export default function GlucoseMonitor() {
         });
     };
 
-    // Custom tooltip
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {

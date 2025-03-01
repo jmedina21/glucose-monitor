@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import axios from "axios";
 
-// Define a simplified response type that only contains what the frontend needs
 interface SimplifiedGlucoseResponse {
     value: number;
     trend: number;
@@ -35,13 +34,13 @@ export default async function handler(
             }
         );
 
-        // Extract only the necessary data from the response
         const apiResponse = response.data;
 
         if (apiResponse?.data?.connection?.glucoseItem) {
             const glucoseItem = apiResponse.data.connection.glucoseItem;
 
             // Create a simplified response object with only the data needed by the frontend
+            // Necessary to not show patient details
             const simplifiedResponse: SimplifiedGlucoseResponse = {
                 value: glucoseItem.Value,
                 trend: glucoseItem.TrendArrow,
