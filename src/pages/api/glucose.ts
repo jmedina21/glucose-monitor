@@ -55,14 +55,11 @@ export default async function handler(
         } else {
             return res.status(404).json({ message: "Glucose data not found" });
         }
-    } catch (error: any) {
-        console.error(
-            "Error fetching glucose data:",
-            error.response?.data || error.message
-        );
+    } catch (error) {
+        console.error("Error fetching glucose data:", error);
         return res.status(500).json({
             message: "Error fetching glucose data",
-            error: error.response?.data || error.message,
+            error: error,
         });
     }
 }

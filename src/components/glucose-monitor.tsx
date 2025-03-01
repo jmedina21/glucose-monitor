@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, Battery, Droplet } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Droplet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import axios from "axios";
 
-type TrendDirection = "up" | "down" | "stable";
 type GlucoseLevel = "normal" | "high" | "low";
 
 interface GlucoseData {
@@ -20,33 +19,46 @@ export default function GlucoseMonitor() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    async function fetchGlucose() {
-        try {
-            setLoading(true);
-            setError(null);
+    useEffect(() => {
+        async function fetchGlucose() {
+            try {
+                setLoading(true);
+                setError(null);
 
-            // Call our Next.js API route
-            const response = await axios.get("/api/glucose");
+                // Call our Next.js API route
+                const response = await axios.get("/api/glucose");
 
-            // The response is now already simplified
-            const glucoseData = response.data;
+                // The response is now already simplified
+                const glucoseData = response.data;
 
-            // Update the state with the simplified data
-            setCurrentData({
-                value: glucoseData.value,
-                trend: glucoseData.trend,
-                timestamp: glucoseData.timestamp,
-                level: determineLevel(glucoseData.value),
-                isHigh: glucoseData.isHigh,
-                isLow: glucoseData.isLow,
-            });
-        } catch (error) {
-            console.error("Error fetching glucose data:", error);
-            setError("Failed to fetch glucose data. Please try again later.");
-        } finally {
-            setLoading(false);
+                // Update the state with the simplified data
+                setCurrentData({
+                    value: glucoseData.value,
+                    trend: glucoseData.trend,
+                    timestamp: glucoseData.timestamp,
+                    level: determineLevel(glucoseData.value),
+                    isHigh: glucoseData.isHigh,
+                    isLow: glucoseData.isLow,
+                });
+            } catch (error) {
+                console.error("Error fetching glucose data:", error);
+                setError(
+                    "Failed to fetch glucose data. Please try again later."
+                );
+            } finally {
+                setLoading(false);
+            }
         }
-    }
+
+        fetchGlucose();
+
+        // Set up polling to fetch data every 10 seconds
+        const interval = setInterval(() => {
+            fetchGlucose();
+        }, 10 * 1000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     // Helper function to determine trend direction based on API response
     const TrendArrow = () => {
@@ -78,17 +90,6 @@ export default function GlucoseMonitor() {
         if (value < 70) return "low";
         return "normal";
     }
-
-    useEffect(() => {
-        fetchGlucose();
-
-        // Set up polling to fetch data every 5 minutes
-        const interval = setInterval(() => {
-            fetchGlucose();
-        }, 5 * 60 * 1000);
-
-        return () => clearInterval(interval);
-    }, []);
 
     // Get color based on glucose level
     const getValueColor = () => {

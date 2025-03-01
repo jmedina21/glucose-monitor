@@ -107,3 +107,5 @@ interface ApiResponse {
     data: Data;
     ticket: Ticket;
 }
+
+export type { ApiResponse };
