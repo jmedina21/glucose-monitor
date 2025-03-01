@@ -51,7 +51,12 @@ export default async function handler(
                 isLow: glucoseItem.isLow,
             };
 
-            return res.status(200).json(simplifiedResponse);
+            const glucoseGraphData = apiResponse.data.graphData;
+
+            return res.status(200).json({
+                glucose: simplifiedResponse,
+                glucoseGraphData: glucoseGraphData,
+            });
         } else {
             return res.status(404).json({ message: "Glucose data not found" });
         }

@@ -1,6 +1,18 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, Droplet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ReferenceLine,
+    ResponsiveContainer,
+} from "recharts";
 import axios from "axios";
 
 type GlucoseLevel = "normal" | "high" | "low";
@@ -14,8 +26,23 @@ interface GlucoseData {
     isLow: boolean;
 }
 
+interface GlucoseGraphData {
+    FactoryTimestamp: string;
+    Timestamp: string;
+    type: number;
+    ValueInMgPerDl: number;
+    MeasurementColor: number;
+    GlucoseUnits: number;
+    Value: number;
+    isHigh: boolean;
+    isLow: boolean;
+}
+
 export default function GlucoseMonitor() {
     const [currentData, setCurrentData] = useState<GlucoseData | null>(null);
+    const [glucoseGraphData, setGlucoseGraphData] = useState<
+        GlucoseGraphData[]
+    >([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +56,8 @@ export default function GlucoseMonitor() {
                 const response = await axios.get("/api/glucose");
 
                 // The response is now already simplified
-                const glucoseData = response.data;
+                const glucoseData = response.data.glucose;
+                const glucoseGraphData = response.data.glucoseGraphData;
 
                 // Update the state with the simplified data
                 setCurrentData({
@@ -40,6 +68,8 @@ export default function GlucoseMonitor() {
                     isHigh: glucoseData.isHigh,
                     isLow: glucoseData.isLow,
                 });
+
+                setGlucoseGraphData(glucoseGraphData);
             } catch (error) {
                 console.error("Error fetching glucose data:", error);
                 setError(
@@ -52,10 +82,10 @@ export default function GlucoseMonitor() {
 
         fetchGlucose();
 
-        // Set up polling to fetch data every 10 seconds
+        // Set up polling to fetch data every 60 seconds
         const interval = setInterval(() => {
             fetchGlucose();
-        }, 10 * 1000);
+        }, 60 * 1000);
 
         return () => clearInterval(interval);
     }, []);
@@ -113,9 +143,34 @@ export default function GlucoseMonitor() {
         );
     }
 
+    // Format timestamp for tooltip
+    const formatTime = (timestamp: string) => {
+        return new Date(timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    // Custom tooltip
+    const CustomTooltip = ({ active, payload }: any) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-gray-800 p-3 rounded-lg border border-gray-700">
+                    <p className="text-gray-200">
+                        {formatTime(payload[0].payload.Timestamp)}
+                    </p>
+                    <p className="text-green-400 font-bold">
+                        {payload[0].value} mg/dL
+                    </p>
+                </div>
+            );
+        }
+        return null;
+    };
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-950 p-4">
-            <Card className="w-full max-w-md bg-gray-900 border-gray-800">
+            <Card className="w-full max-w-2xl bg-gray-900 border-gray-800">
                 <CardContent className="p-6">
                     <div className="flex justify-between items-center mb-6">
                         <div className="flex items-center">
@@ -126,13 +181,34 @@ export default function GlucoseMonitor() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center py-8">
-                        <div className="flex items-center justify-center gap-4">
-                            <span
-                                className={`text-6xl font-bold ${getValueColor()}`}
-                            >
-                                {currentData.value}
-                            </span>
+                    <div className="flex flex-col items-center justify-center py-6">
+                        <div className="flex items-center justify-center gap-6">
+                            <div className="flex flex-col items-center">
+                                <span
+                                    className={`text-6xl font-bold ${getValueColor()}`}
+                                >
+                                    {currentData.value}
+                                </span>
+                                <span className="text-gray-400 mt-1">
+                                    mg/dL
+                                </span>
+                            </div>
+
+                            <div className="h-16 w-px bg-gray-700 mx-2"></div>
+
+                            <div className="flex flex-col items-center">
+                                <span
+                                    className={`text-6xl font-bold ${getValueColor()}`}
+                                >
+                                    {(currentData.value / 18).toFixed(1)}
+                                </span>
+                                <span className="text-gray-400 mt-1">
+                                    mmol/L
+                                </span>
+                            </div>
+
+                            <div className="h-16 w-px bg-gray-700 mx-2"></div>
+
                             <div className="flex flex-col items-center">
                                 <TrendArrow />
                                 <span className="text-gray-400 text-xs mt-1">
@@ -146,7 +222,56 @@ export default function GlucoseMonitor() {
                                 </span>
                             </div>
                         </div>
-                        <span className="text-gray-400 mt-2">mg/dL</span>
+                    </div>
+
+                    <div className="mt-4 h-80 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart
+                                data={glucoseGraphData}
+                                margin={{
+                                    top: 5,
+                                    right: 10,
+                                    left: 10,
+                                    bottom: 20,
+                                }}
+                            >
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke="rgba(255,255,255,0.1)"
+                                    vertical={false}
+                                />
+                                <XAxis
+                                    dataKey="Timestamp"
+                                    tickFormatter={formatTime}
+                                    stroke="#6B7280"
+                                    tick={{ fill: "#9CA3AF" }}
+                                />
+                                <YAxis
+                                    domain={[60, 200]}
+                                    stroke="#6B7280"
+                                    tick={{ fill: "#9CA3AF" }}
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <ReferenceLine
+                                    y={180}
+                                    stroke="#EF4444"
+                                    strokeDasharray="3 3"
+                                />
+                                <ReferenceLine
+                                    y={70}
+                                    stroke="#3B82F6"
+                                    strokeDasharray="3 3"
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="Value"
+                                    stroke="#10B981"
+                                    strokeWidth={2}
+                                    dot={{ fill: "#10B981", strokeWidth: 2 }}
+                                    activeDot={{ r: 8 }}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </div>
 
                     <div className="mt-6 pt-4 border-t border-gray-800">
