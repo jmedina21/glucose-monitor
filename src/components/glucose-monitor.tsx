@@ -24,6 +24,7 @@ interface GlucoseData {
     level: GlucoseLevel;
     isHigh: boolean;
     isLow: boolean;
+    fetchedAt: string;
 }
 
 interface GlucoseGraphData {
@@ -52,21 +53,32 @@ export default function GlucoseMonitor() {
                 setLoading(true);
                 setError(null);
 
-                // Call our Next.js API route with cache-busting parameters otherwise the data will be cached and will get a 304 Not Modified response
+                // Add a unique timestamp for cache busting
+                const timestamp = new Date().getTime();
+
+                // Call our Next.js API route with enhanced cache-busting
                 const response = await axios.get(
-                    `/api/glucose?t=${new Date().getTime()}`,
+                    `/api/glucose?t=${timestamp}`,
                     {
                         headers: {
-                            "Cache-Control": "no-cache",
+                            "Cache-Control":
+                                "no-cache, no-store, must-revalidate",
                             Pragma: "no-cache",
                             Expires: "0",
                         },
                     }
                 );
 
+                // Log the response for debugging
+                console.log(
+                    `Glucose data fetched at ${new Date().toISOString()}:`,
+                    response.data
+                );
+
                 const glucoseData = response.data.glucose;
                 const glucoseGraphData = response.data.glucoseGraphData;
 
+                // Add timestamp to help identify when the data was fetched
                 setCurrentData({
                     value: glucoseData.value,
                     trend: glucoseData.trend,
@@ -74,6 +86,7 @@ export default function GlucoseMonitor() {
                     level: determineLevel(glucoseData.value),
                     isHigh: glucoseData.isHigh,
                     isLow: glucoseData.isLow,
+                    fetchedAt: new Date().toISOString(), // Add this to track when data was fetched
                 });
 
                 setGlucoseGraphData(glucoseGraphData);
@@ -297,6 +310,20 @@ export default function GlucoseMonitor() {
                                     : currentData.level === "high"
                                     ? "High"
                                     : "Low"}
+                            </span>
+                        </div>
+                        <div className="flex justify-between text-sm mt-2">
+                            <span className="text-gray-400">Fetched at</span>
+                            <span className="text-gray-300">
+                                {currentData.fetchedAt
+                                    ? new Date(
+                                          currentData.fetchedAt
+                                      ).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          second: "2-digit",
+                                      })
+                                    : "Unknown"}
                             </span>
                         </div>
                     </div>
